@@ -1,9 +1,11 @@
 # Retrives top 50 trends from twitter and tweets / tweets per minute for given keywords.
+# To do: Sentiment analysis
 # James S. Lucas - 20200607
 import config
 import tweepy
 from sys import stdout, argv
 import datetime
+from operator import itemgetter
 
 # twitter API keys (jayyman55_pi):
 API_KEY = config.API_KEY 
@@ -30,13 +32,15 @@ class MyStreamListener(tweepy.StreamListener):
 
     def on_status(self, status):
         #print(status.text)
+        #positive_words = ['love', 'wonderful', 'best', 'great', 'superb', 'beautiful']
+        #negative_words = ['bad', 'worst', 'stupid', 'waste', 'boring', '?', '!']
         elapsed_time = datetime.datetime.now() - self.start_time
         if elapsed_time.seconds > 1:
-            tweet = status.text
-            words = tweet.split()
             message = ""
+            tweet = status.text
+            #words = tweet.split()
             for tag in self.tags:
-                if tag in words:
+                if tag.upper() in tweet.upper():
                     self.dict_num_tweets[tag] += 1
                 self.dict_tweet_rate[tag] = round(self.dict_num_tweets[tag] / elapsed_time.seconds * 60)
             for tag in self.tags:
@@ -64,23 +68,33 @@ def get_trends():
     #WOEID = 1 # World
     #WOEID = 23424977 # USA
     #WOEID = 2347563 # CA
-    WOEID = 2442047 # Los Angeles
+    #WOEID = 2442047 # Los Angeles
     #WOEID = 2347591 # New York State
     #WOEID = 2459115 # NYC
-    trends_list = api.trends_place(WOEID)
-    trends_dict = trends_list[0]
-    trends = trends_dict['trends']
-    names = [trend['name'] for trend in trends]
-    trends_names = ' | '.join(names)
-    print(" ")
-    print(trends_names)
+    #WOEID_dict = {'World': 1, 'USA': 23424977, 'CA': 2347563, 'LA': 2442047, 'New York State': 2347591, 'NYC': 2459115}
+    WOEID_dict = {'World': 1, 'NYC': 2459115, 'LA': 2442047, 'USA': 23424977}
+    for k, v in WOEID_dict.items():
+        data = api.trends_place(v, '#')
+        trends = data[0]["trends"]
+        # Remove trends with no Tweet volume data
+        trends = filter(itemgetter("tweet_volume"), trends)
+        # Alternatively, using 0 during sorting would work as well:
+        # sorted(trends, key=lambda trend: trend["tweet_volume"] or 0, reverse=True)
+        sorted_trends = sorted(trends, key=itemgetter("tweet_volume"), reverse=True)
+        #top_10_trend_names = '\n'.join(trend['name'] for trend in sorted_trends[:10])
+        #with open("trends.txt", 'w') as trends_file:
+            #print(top_10_trend_names, file=trends_file)
+        names = [trend['name'] for trend in sorted_trends]
+        trends_names = ' | '.join(names)
+        print(" ")
+        print(k)
+        print("| " + trends_names + " |")
 
 
 def main(tags):
     try:
         get_trends()
         # Start the tweepy SteamListner as asynchronous thread.
-        # Jayyman55: (784864349546393600), wawzat: (17898527)
         myStreamListener = MyStreamListener(tags)
         myStream = tweepy.Stream(auth=api.auth, listener=myStreamListener)
         print(" ")
