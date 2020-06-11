@@ -1,13 +1,14 @@
 # Retrives top 50 trends from twitter and tweets / tweets per minute for given keywords.
 # To do: Sentiment analysis
-# James S. Lucas - 20200607
+# Store Twitter API Keys and Tokens in a file named config.py
+# James S. Lucas - 20200611
 import config
 import tweepy
 from sys import stdout, argv
 import datetime
 from operator import itemgetter
 
-# twitter API keys (jayyman55_pi):
+# twitter API keys:
 API_KEY = config.API_KEY 
 API_SECRET = config.API_SECRET 
 ACCESS_TOKEN = config.ACCESS_TOKEN 
@@ -21,7 +22,6 @@ api = tweepy.API(auth)
 
 # tweepy SteamListner Class
 class MyStreamListener(tweepy.StreamListener):
-
     def __init__(self, tags):
         super(MyStreamListener, self).__init__()
         self.num_riot = 0
@@ -45,7 +45,7 @@ class MyStreamListener(tweepy.StreamListener):
                 self.dict_tweet_rate[tag] = round(self.dict_num_tweets[tag] / elapsed_time.seconds * 60)
             for tag in self.tags:
                 message = message + tag + ": " + str(self.dict_num_tweets[tag]) + " / " + str(self.dict_tweet_rate[tag]) + " | "
-            stdout.write("\r | " + message + "            ")
+            stdout.write("\r | " + message + "  ")
 
     # on_direct_message isn't working for some reason but not implemented in program so no worries
     def on_direct_message(self, status):
@@ -57,22 +57,23 @@ class MyStreamListener(tweepy.StreamListener):
             print("Failed on_direct_message()", str(e))    
 
     def on_error(self, status_code):
-       # Status code 420 is too many connections in time period. 10 second rate limit increases exponentially for each 420 error
-       if status_code == 420:
-          print("Error 420, Twitter rate limit in effect")
-          #returning False in on_data disconnects the stream
-          return False
+        # Status code 420 is too many connections in time period. 10 second rate limit increases exponentially for each 420 error
+        if status_code == 420:
+            print("Error 420, Twitter rate limit in effect")
+            #returning False in on_data disconnects the stream
+            return False
 
 
 def get_trends():
     #WOEID = 1 # World
     #WOEID = 23424977 # USA
-    #WOEID = 2347563 # CA
+    #WOEID = 2347563 # CA (Not working)
     #WOEID = 2442047 # Los Angeles
-    #WOEID = 2347591 # New York State
+    #WOEID = 2347591 # New York State (Not working)
     #WOEID = 2459115 # NYC
     #WOEID_dict = {'World': 1, 'USA': 23424977, 'CA': 2347563, 'LA': 2442047, 'New York State': 2347591, 'NYC': 2459115}
-    WOEID_dict = {'World': 1, 'NYC': 2459115, 'LA': 2442047, 'USA': 23424977}
+    #WOEID_dict = {'World': 1, 'NYC': 2459115, 'LA': 2442047, 'USA': 23424977}
+    WOEID_dict = {'USA': 23424977}
     for k, v in WOEID_dict.items():
         data = api.trends_place(v, '#')
         trends = data[0]["trends"]
@@ -99,10 +100,12 @@ def main(tags):
         myStream = tweepy.Stream(auth=api.auth, listener=myStreamListener)
         print(" ")
         myStream.filter(track=tags)
-
     except KeyboardInterrupt:
         print(" ")
         print("End by Ctrl-C")
+        myStream.disconnect()
+        exit()
+
 
 if __name__ == "__main__":
     tags =[]
