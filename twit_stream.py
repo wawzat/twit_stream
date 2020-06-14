@@ -1,6 +1,7 @@
 # Retrives top 50 trends from twitter and tweets / tweets per minute for given keywords.
 # Performs rudimentary sentiment scoring
 # Store Twitter API Keys and Tokens in a file named config.py
+# To do: for - in searches are matching partial words (i.e., lie in believe)
 # James S. Lucas - 20200613
 import config
 import tweepy
@@ -8,6 +9,7 @@ from sys import stdout, argv
 import datetime
 from operator import itemgetter
 import argparse
+import csv
 
 # twitter API keys:
 API_KEY = config.API_KEY 
@@ -64,20 +66,28 @@ class MyStreamListener(tweepy.StreamListener):
 
     def on_status(self, status):
         #print(status.text)
+        csv_output_file = r"D:\Users\James\OneDrive\Documents\Raspberry Pi-Matrix5\JSL Python Code\Twitter\tweets.csv"
+        row = []
+        tweet_score = 0
         positive_words = [
-            'beautiful', 'begin', 'best', 'better', 'great', 'hope',
-            'leader', 'love', 'positive', 'potential', 'pro', 'ready',
-            'superb', 'wonderful'
+            'amazing', 'beautiful', 'begin', 'best', 'better', 'celebrate', 'celebrating', 'creative', 'fabulous',
+            'fight', 'great', 'happy', 'incredible', 'leader', 'pleased', 'positive', 'potential', 'ready',
+            'superb', 'support biden', 'support trump', 'voting', 'win', 'wonderful', 'trump2020', 'biden2020'
             ]
         negative_words = [
-            'bad', 'cheat', 'cheeto', 'creepy', 'fraud', 'less', 'lie',
-            'orange', 'stupid', 'sleepy', 'sucks',
-            'waste', 'weak', 'worst', '?'
+            'against', 'afraid', 'anyone voting', 'bad', 'bs', 'cheat', 'cheeto', 'creepy', 'crying', 'deny', 'detest', 'despite',
+            'devisive', 'embarrass', 'evil', 'fail', 'fake', 'feeble', 'fraud', 'fuck', 'garbage', 'hell', 'homophobe', 'hoax', 'idiot',
+            'leftist', 'liar', 'lying', 'loser', 'losing', 'misinformation', 'not', 'outrage', 'orange', 'painful', 'pedophile',
+            'racism', 'racist', 'rapist', 'rid', 'shit', 'stupid', 'sleepy', 'sucks',
+            'upset', 'useless', 'waste', 'weak', 'wing', 'worst'
             ]
         elapsed_time = datetime.datetime.now() - self.start_time
         if elapsed_time.seconds > 1:
             message = ""
-            tweet = status.text
+            try:
+                tweet = status.extended_tweet["full_text"]
+            except AttributeError:
+                tweet = status.text
             #words = tweet.split()
             for tag in self.tags:
                 if tag.upper() in tweet.upper():
@@ -85,11 +95,30 @@ class MyStreamListener(tweepy.StreamListener):
                     for pos_word in positive_words:
                         if pos_word.upper() in tweet.upper():
                             self.dict_sentiment[tag] += 1
+                            tweet_score += 1
                             break
                     for neg_word in negative_words:
                         if neg_word.upper() in tweet.upper():
                             self.dict_sentiment[tag] -= 1
+                            tweet_score -= 1
                             break
+                    with open(csv_output_file, 'a', encoding='utf_8_sig', newline='') as f_output:
+                        csv_output = csv.writer(f_output)
+                        row.append(tag)
+                        if tweet_score > 0:
+                            word = pos_word
+                        elif tweet_score < 0:
+                            word = neg_word
+                        else:
+                            word = " "
+                        row.append(word)
+                        row.append(tweet_score)
+                        row.append(status.author.screen_name)
+                        #row.append(status.source)
+                        row.append(tweet)
+                        csv_output.writerow(row)
+                        row = []
+                        #tweet_score = 0
                 self.dict_tweet_rate[tag] = round(self.dict_num_tweets[tag] / elapsed_time.seconds * 60)
             for tag in self.tags:
                 if self.dict_num_tweets[tag] != 0:
@@ -101,7 +130,7 @@ class MyStreamListener(tweepy.StreamListener):
                     + " / " + str(sentiment_pct)
                     + " / " + str(self.dict_tweet_rate[tag])
                     + " | "
-                    )
+                   )
             stdout.write("\r | " + message + "  ")
 
     def on_error(self, status_code):
@@ -135,7 +164,7 @@ def main():
         get_trends(args)
         # Start the tweepy SteamListner as asynchronous thread.
         myStreamListener = MyStreamListener(tags)
-        myStream = tweepy.Stream(auth=api.auth, listener=myStreamListener)
+        myStream = tweepy.Stream(auth=api.auth, listener=myStreamListener, tweet_mode='extended')
         print(" ")
         myStream.filter(track=tags)
     except KeyboardInterrupt:
