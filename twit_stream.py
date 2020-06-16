@@ -2,14 +2,14 @@
 # Performs rudimentary sentiment scoring
 # Store Twitter API Keys and Tokens in a file named config.py
 # To do: for - in searches are matching partial words (i.e., lie in believe)
-# James S. Lucas - 20200613
+# James S. Lucas - 20200616
 import config
 import tweepy
 from sys import stdout, argv
 import datetime
 from operator import itemgetter
 import argparse
-import csv
+#import csv
 
 # twitter API keys:
 API_KEY = config.API_KEY 
@@ -66,7 +66,7 @@ class MyStreamListener(tweepy.StreamListener):
 
     def on_status(self, status):
         #print(status.text)
-        csv_output_file = r"D:\Users\James\OneDrive\Documents\Raspberry Pi-Matrix5\JSL Python Code\Twitter\tweets.csv"
+        #csv_output_file = r"D:\Users\James\OneDrive\Documents\Raspberry Pi-Matrix5\JSL Python Code\Twitter\tweets.csv"
         row = []
         tweet_score = 0
         positive_words = [
@@ -102,22 +102,22 @@ class MyStreamListener(tweepy.StreamListener):
                             self.dict_sentiment[tag] -= 1
                             tweet_score -= 1
                             break
-                    with open(csv_output_file, 'a', encoding='utf_8_sig', newline='') as f_output:
-                        csv_output = csv.writer(f_output)
-                        row.append(tag)
-                        if tweet_score > 0:
-                            word = pos_word
-                        elif tweet_score < 0:
-                            word = neg_word
-                        else:
-                            word = " "
-                        row.append(word)
-                        row.append(tweet_score)
-                        row.append(status.author.screen_name)
+                    #with open(csv_output_file, 'a', encoding='utf_8_sig', newline='') as f_output:
+                        #csv_output = csv.writer(f_output)
+                        #row.append(tag)
+                        #if tweet_score > 0:
+                            #word = pos_word
+                        #elif tweet_score < 0:
+                            #word = neg_word
+                        #else:
+                            #word = " "
+                        #row.append(word)
+                        #row.append(tweet_score)
+                        #row.append(status.author.screen_name)
                         #row.append(status.source)
-                        row.append(tweet)
-                        csv_output.writerow(row)
-                        row = []
+                        #row.append(tweet)
+                        #csv_output.writerow(row)
+                        #row = []
                         #tweet_score = 0
                 self.dict_tweet_rate[tag] = round(self.dict_num_tweets[tag] / elapsed_time.seconds * 60)
             for tag in self.tags:
